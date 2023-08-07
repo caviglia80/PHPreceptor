@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Datos</title>
+  <meta charset="UTF-8">
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <table id="data-table">
+    <thead>
+      <tr>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+
+  <script>
+    const fieldLabels = {
+      'accelerometerX': 'Aceleracion X',
+      'accelerometerY': 'Aceleracion Y',
+      'accelerometerZ': 'Aceleracion Z',
+      'gyroX': 'Velocidad X',
+      'gyroY': 'Velocidad Y',
+      'gyroZ': 'Velocidad Z',
+      'temperature': 'Temperatura',
+      'Kp': 'Kp',
+      'Ki': 'Ki',
+      'Kd': 'Kd',
+      'error': 'error'
+    };
+
+    // Crear las filas de la tabla dinámicamente
+    const tableBody = document.querySelector('#data-table tbody');
+    for (let field in fieldLabels) {
+      const row = document.createElement('tr');
+
+      const labelCell = document.createElement('td');
+      labelCell.textContent = fieldLabels[field];
+      row.appendChild(labelCell);
+
+      const valueCell = document.createElement('td');
+      valueCell.id = field;
+      row.appendChild(valueCell);
+
+      tableBody.appendChild(row);
+    }
+
+    function updatePage() {
+      fetch('log.php', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        for (let field in fieldLabels) {
+          document.getElementById(field).textContent = data[field];
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    }
+
+    setInterval(updatePage, 500);
+  </script>
+</body>
+</html>
