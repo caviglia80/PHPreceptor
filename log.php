@@ -1,4 +1,5 @@
 <?php
+
 $fields = [
 	'accelerometerX',
 	'accelerometerY',
@@ -13,18 +14,30 @@ $fields = [
 	'error'
 ];
 
+$filePath = 'data.json';
+
 // Check if it's a POST request and save data
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	$response = array();
+	$inputData = json_decode(file_get_contents('php://input'), true);
+	$response = [];
 	foreach ($fields as $field) {
-		$response[$field] = isset($_POST[$field]) ? $_POST[$field] : 'No data';
+		$response[$field] = array_key_exists($field, $inputData) ? $inputData[$field] : 'No data';
 	}
 
 	// Add a timestamp
 	$response['timestamp'] = time();
 
-	// Save data to a JSON file
-	file_put_contents('data.json', json_encode($response));
+	// Read existing data
+	$existingData = file_exists($filePath) ? json_decode(file_get_contents($filePath), true) : [];
+	if (!is_array($existingData)) {
+		$existingData = [];
+	}
+
+	// Append new data
+	$existingData[] = $response;
+
+	// Save updated data to JSON file
+	file_put_contents($filePath, json_encode($existingData));
 }
 
 // If it's a GET request, read data
@@ -32,26 +45,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 	header('Content-Type: application/json');
 
 	// Check if file exists and return its content
-	if (file_exists('data.json')) {
-		$contents = file_get_contents('data.json');
+	if (file_exists($filePath)) {
+		$contents = file_get_contents($filePath);
 		$data = json_decode($contents, true);
 
-		// Check if more than 4 seconds have passed
-		if (time() - $data['timestamp'] > 5) {
-			$response = array();
-			foreach ($fields as $field) {
-				$response[$field] = 'No data';
-			}
+		// Calculate time since last update
+		$lastUpdate = $data ? $data[count($data) - 1]['timestamp'] : 0;
+		$timeSinceLastUpdate = time() - $lastUpdate;
 
-			// Add a timestamp
-			$response['timestamp'] = time();
-
-			echo json_encode($response);
+		if ($timeSinceLastUpdate > 5) {
+			echo json_encode([
+				'error' => 'No recent data available',
+				'timeSinceLastUpdate' => $timeSinceLastUpdate,
+				'dataCount' => count($data)
+			]);
 		} else {
-			echo $contents;
+			echo json_encode([
+				'data' => $data[count($data) - 1],
+				'timeSinceLastUpdate' => $timeSinceLastUpdate,
+				'dataCount' => count($data)
+			]);
 		}
 	} else {
 		echo json_encode(['error' => 'No data available']);
 	}
 }
-
